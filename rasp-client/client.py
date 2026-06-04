@@ -5,6 +5,7 @@ Sends telemetry to the platform and receives commands via MQTT.
 """
 
 import json
+import os
 import time
 import random
 import signal
@@ -174,7 +175,19 @@ class IoTClient:
         
         if command == "REBOOT":
             print("[IoT] Rebooting...")
-            time.sleep(1)
+            # ACK antes de reiniciar: después del reboot ya no podríamos enviarlo.
+            log_id = payload.get("logId")
+            if log_id:
+                self._send_ack(log_id, "ACKNOWLEDGED")
+            os.system("sudo reboot")  # requiere sudo sin contraseña para el usuario
+            return
+        elif command == "POWEROFF":
+            print("[IoT] Powering off...")
+            log_id = payload.get("logId")
+            if log_id:
+                self._send_ack(log_id, "ACKNOWLEDGED")
+            os.system("sudo poweroff")  # requiere sudo sin contraseña para el usuario
+            return
         elif command == "SET_ACCEPTING":
             accepting = command_payload.get("value", True)
             print(f"[IoT] Setting accepting: {accepting}")

@@ -357,11 +357,14 @@ void updateSensors() {
 
 | Comando | Payload | Descripción |
 |---------|---------|-------------|
-| `REBOOT` | — | Reinicia el dispositivo |
+| `REBOOT` | — | Reinicia el dispositivo (ESP32: `ESP.restart()` · RPi: `sudo reboot`) |
+| `POWEROFF` | — | Apaga el dispositivo (ESP32: deep sleep hasta reset · RPi: `sudo poweroff`) |
 | `SET_ACCEPTING` | `{ "value": true/false }` | Activa/desactiva aceptación |
 | `OPEN_LID` | — | Abre la tapa (servo) |
 | `GET_STATUS` | — | Solicita estado actual |
 | `CONSOLE_LOG` | `{ "message": "...", "level": "info" }` | Log remoto |
+
+> **Comandos básicos** (`REBOOT`, `POWEROFF`) ya vienen implementados en ambos clientes de ejemplo (`esp32-client.ino` y `rasp-client/client.py`). En la Raspberry requieren `sudo` sin contraseña para el usuario que corre el cliente (`sudo visudo` → `usuario ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/poweroff`).
 
 ### Flujo de Comando
 

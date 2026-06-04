@@ -299,7 +299,15 @@ void handleCommand(const char* command, const JsonObject& payload, const char* l
     sendAck(logId, "ACKNOWLEDGED");
     delay(500);
     ESP.restart();
-  } 
+  }
+  else if (strcmp(command, "POWEROFF") == 0) {
+    // El ESP32 no se "apaga": entra en deep sleep indefinido (consumo mínimo).
+    // Se despierta con un reset físico o un pin EXT (ver docs de esp_sleep).
+    Serial.println("Powering off (deep sleep)...");
+    sendAck(logId, "ACKNOWLEDGED");
+    delay(500);
+    ESP.deepSleep(0);  // 0 = sin temporizador → duerme hasta reset
+  }
   else if (strcmp(command, "SET_ACCEPTING") == 0) {
     if (payload.containsKey("value")) {
       isAccepting = payload["value"].as<bool>();
