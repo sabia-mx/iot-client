@@ -21,12 +21,16 @@ class IoTClient:
         mqtt_host: str = "localhost",
         mqtt_port: int = 1883,
         project_prefix: str = "ECO",
+        tls: bool = False,
+        tls_insecure: bool = False,
     ):
         self.serial = serial
         self.mqtt_token = mqtt_token
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
         self.project_prefix = project_prefix
+        self.tls = tls
+        self.tls_insecure = tls_insecure
 
         self.running = True
         self.client: Optional[mqtt.Client] = None
@@ -36,6 +40,7 @@ class IoTClient:
     def start(self):
         self.client = mqtt.Client(client_id=self.serial)
         self.client.username_pw_set(self.serial, self.mqtt_token)
+        self._apply_tls(self.client)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
@@ -62,6 +67,12 @@ class IoTClient:
         while self.running:
             self._send_telemetry()
             time.sleep(30)
+
+    def _apply_tls(self, client: mqtt.Client) -> None:
+        if self.tls:
+            client.tls_set()
+            if self.tls_insecure:
+                client.tls_insecure_set(True)
 
     def _signal_handler(self, signum, frame):
         print("\n[IoT] Shutting down...")
@@ -106,6 +117,7 @@ class IoTClient:
         print("[IoT] Sending provision request...")
         client = mqtt.Client()
         client.username_pw_set(self.serial, self.mqtt_token)
+        self._apply_tls(client)
         try:
             client.connect(self.mqtt_host, self.mqtt_port, 60)
             client.publish(f"devices/provision/{self.serial}", "", qos=1)
@@ -206,15 +218,19 @@ def main():
     parser.add_argument("--host", default="localhost", help="MQTT broker host")
     parser.add_argument("--port", type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--prefix", default="ECO", help="Project device prefix")
-    
+    parser.add_argument("--tls", action="store_true", help="Usar TLS (puerto 8883)")
+    parser.add_argument("--insecure", action="store_true", help="No validar el cert del broker (piloto)")
+
     args = parser.parse_args()
-    
+
     client = IoTClient(
         serial=args.serial,
         mqtt_token=args.token,
         mqtt_host=args.host,
         mqtt_port=args.port,
         project_prefix=args.prefix,
+        tls=args.tls,
+        tls_insecure=args.insecure,
     )
     client.start()
 
