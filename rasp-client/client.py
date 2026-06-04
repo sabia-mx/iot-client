@@ -8,6 +8,7 @@ import json
 import time
 import random
 import signal
+import ssl
 import sys
 from typing import Any, Callable, Optional
 import paho.mqtt.client as mqtt
@@ -70,9 +71,13 @@ class IoTClient:
 
     def _apply_tls(self, client: mqtt.Client) -> None:
         if self.tls:
-            client.tls_set()
             if self.tls_insecure:
+                # Cert autofirmado (piloto): no validar la cadena del certificado.
+                # tls_insecure_set(True) solo desactiva el check de hostname, no el de cert.
+                client.tls_set(cert_reqs=ssl.CERT_NONE)
                 client.tls_insecure_set(True)
+            else:
+                client.tls_set()
 
     def _signal_handler(self, signum, frame):
         print("\n[IoT] Shutting down...")
