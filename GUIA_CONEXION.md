@@ -17,7 +17,7 @@
 
 - **Panel de control** desplegado y accesible (local o producción)
 - **Backend** corriendo con base de datos migrada y seed ejecutado
-- **Broker MQTT** disponible (EMQX local, HiveMQ Cloud, o EMQX Cloud)
+- **Broker MQTT** disponible (EMQX local o EMQX en DigitalOcean)
 - Credenciales de **SuperAdmin** o **Admin** con acceso para crear dispositivos
 
 ---
@@ -118,20 +118,20 @@ docker logs iot_emqx
 - **Serial**: `ECO-2026-0001`
 - **Token**: `a1b2c3d4e5f6...`
 
-### Opción B: Producción (HiveMQ Cloud)
+### Opción B: Producción (EMQX en DigitalOcean)
 
 ```bash
 # URL de conexión segura
-mqtts://649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud:8883
+mqtts://167.172.141.63:8883
 ```
 
 **Config del dispositivo:**
-- **Host**: `649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud`
+- **Host**: `167.172.141.63`
 - **Port**: `8883` (TLS requerido)
 - **Serial**: `ECO-2026-0001`
 - **Token**: `a1b2c3d4e5f6...`
 
-⚠️ **NOTA**: Si usas ESP32 con HiveMQ Cloud, necesitas configurar certificados TLS o usar `WiFiClientSecure`.
+⚠️ **NOTA**: El certificado del broker EMQX es autofirmado. En el piloto los clientes se conectan en modo inseguro: en ESP32 usa `WiFiClientSecure` con `setInsecure()`, y en la Raspberry pasa `--tls --insecure`.
 
 ---
 
@@ -155,13 +155,14 @@ python client.py \
   --port 1883 \
   --prefix ECO
 
-# Producción (con HiveMQ Cloud)
+# Producción (con EMQX en DigitalOcean)
 python client.py \
   --serial ECO-2026-0001 \
   --token a1b2c3d4e5f6... \
-  --host 649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud \
+  --host 167.172.141.63 \
   --port 8883 \
-  --prefix ECO
+  --prefix ECO \
+  --tls --insecure
 ```
 
 ### 3. Verificar Conexión
@@ -233,9 +234,9 @@ const int MQTT_PORT = 1883;
 const char* PROJECT_PREFIX = "ECO";
 ```
 
-### 3. Para HiveMQ Cloud (TLS)
+### 3. Para producción EMQX (TLS)
 
-Si usas HiveMQ Cloud en producción, necesitas `WiFiClientSecure`:
+Si usas EMQX en DigitalOcean en producción, necesitas `WiFiClientSecure`:
 
 ```cpp
 #include <WiFiClientSecure.h>
@@ -470,7 +471,7 @@ MQTT_URL=mqtt://192.168.68.101:1883
 |----------|----------|--------|
 | Panel | https://iot-panel.vercel.app | 443 |
 | Backend | https://iot-backend-n77w.onrender.com | 443 |
-| MQTT Broker | 649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud | 8883 |
+| MQTT Broker | 167.172.141.63 | 8883 |
 
 ---
 
@@ -490,4 +491,4 @@ Si tienes problemas:
 1. Revisa los logs del dispositivo
 2. Revisa los logs del backend (Render Dashboard → Logs)
 3. Verifica la conexión MQTT con un cliente de prueba (MQTT Explorer, mosquitto_sub)
-4. Consulta la documentación de EMQX o HiveMQ según tu broker
+4. Consulta la documentación de EMQX según tu broker

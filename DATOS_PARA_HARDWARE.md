@@ -20,12 +20,12 @@ Todo lo demás (topics, formato JSON, comandos) es estándar y está documentado
 
 | Dato | Ejemplo (Producción) | Ejemplo (Desarrollo) |
 |------|----------------------|----------------------|
-| **MQTT URL** | `mqtts://649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud:8883` | `mqtt://localhost:1883` |
+| **MQTT URL** | `mqtts://167.172.141.63:8883` | `mqtt://localhost:1883` |
 
 ### Formato completo:
 
 ```
-Producción: mqtts://649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud:8883
+Producción: mqtts://167.172.141.63:8883
 Desarrollo: mqtt://localhost:1883
 ```
 
@@ -35,7 +35,7 @@ Desarrollo: mqtt://localhost:1883
 {
   "serial": "ECO-2026-0001",
   "token": "a1b2c3d4...",
-  "mqttUrl": "mqtts://649013d...hivemq.cloud:8883"
+  "mqttUrl": "mqtts://167.172.141.63:8883"
 }
 ```
 
@@ -53,7 +53,7 @@ const char* DEVICE_SERIAL = "ECO-2026-0001";      // Identificador único
 const char* MQTT_TOKEN = "a1b2c3d4e5f6...";       // Password/Token secreto
 const char* PROJECT_PREFIX = "ECO";                // Prefijo del proyecto
 // MQTT URL (automático del panel):
-// mqtts://649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud:8883
+// mqtts://167.172.141.63:8883
 ```
 
 ### Autenticación MQTT
@@ -258,7 +258,7 @@ const char* WIFI_PASSWORD = "TuPassword";
 const char* DEVICE_SERIAL = "ECO-2026-0001";  // ← Te lo dan
 const char* MQTT_TOKEN = "a1b2c3d4e5f6";      // ← Te lo dan
 const char* PROJECT_PREFIX = "ECO";            // ← Te lo dan
-const char* MQTT_HOST = "649013d762f749d9b5e4e251a7a685ea.s1.eu.hivemq.cloud"; // ← Producción
+const char* MQTT_HOST = "167.172.141.63"; // ← Producción
 const int MQTT_PORT = 8883;                     // ← 1883 para local
 
 // Topics
@@ -360,7 +360,7 @@ Pide al administrador del sistema **3 datos** (la URL del broker viene automáti
 |---|------|---------|-------------|
 | 1 | **Serial** | `ECO-2026-0001` | Identificador único del dispositivo |
 | 2 | **MQTT Token** | `a1b2c3d4e5f6...` | Password secreto |
-| 3 | **MQTT URL** | `mqtts://649013d...hivemq.cloud:8883` | Broker (automático del panel) |
+| 3 | **MQTT URL** | `mqtts://167.172.141.63:8883` | Broker (automático del panel) |
 
 **Nota:** El administrador ve la URL del broker automáticamente al crear el dispositivo. Si estás en desarrollo local, usa `mqtt://localhost:1883`.
 
@@ -378,7 +378,7 @@ El LWT enviará automáticamente "offline" al topic de status. Cuando se reconec
 Sí, puedes enviar cada 5-10 segundos si necesitas datos en tiempo real. Pero considera el consumo de batería y datos móviles.
 
 **¿Necesito TLS/SSL?**
-En producción (HiveMQ Cloud) sí es obligatorio. En desarrollo local no.
+En producción (EMQX en DigitalOcean) sí es obligatorio. En desarrollo local no.
 
 **¿Qué pasa si envío un campo que no está en la lista?**
 Puedes enviar campos adicionales dentro de `extra`. Los campos principales son los estándar pero no son estrictamente obligatorios.
