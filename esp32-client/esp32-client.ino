@@ -8,6 +8,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <functional>
@@ -24,8 +25,8 @@ const char* DEVICE_SERIAL = "ECO-2026-0001";  // Your device serial
 const char* MQTT_TOKEN = "your-mqtt-token-here";  // Get from platform
 
 // MQTT Broker
-const char* MQTT_HOST = "192.168.1.100";  // Your broker IP
-const int MQTT_PORT = 1883;
+const char* MQTT_HOST = "167.172.141.63";  // EMQX en DigitalOcean
+const int MQTT_PORT = 8883;                 // TLS
 
 // Project prefix (from platform)
 const char* PROJECT_PREFIX = "ECO";
@@ -40,7 +41,7 @@ const char* PROJECT_PREFIX = "ECO";
 #define PROVISION_TOPIC "devices/provision/" DEVICE_SERIAL
 
 // WiFi and MQTT clients
-WiFiClient wifiClient;
+WiFiClientSecure wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 // Timing
@@ -70,6 +71,10 @@ void setup() {
 
   // Connect to WiFi
   connectWiFi();
+
+  // Piloto: no validar el certificado del broker (cert autofirmado).
+  // Producción: reemplazar por wifiClient.setCACert(EMQX_CA_PEM);
+  wifiClient.setInsecure();
 
   // Setup MQTT
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
