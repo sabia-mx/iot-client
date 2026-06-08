@@ -54,7 +54,7 @@ const char* MODEL      = "AWARETRACK-001";
 // Bridge HTTP (para el announce de capacidades). Ajustar si cambia el backend.
 const char* BRIDGE_BASE = "https://iot-backend-n77w.onrender.com/api";
 // Comandos que ESTE firmware soporta (REBOOT siempre). Debe coincidir con el handler real.
-const char* SUPPORTED_COMMANDS[] = { "REBOOT", "IDENTIFY" };
+const char* SUPPORTED_COMMANDS[] = { "REBOOT", "IDENTIFY", "FACTORY_RESET" };
 const unsigned long LONG_PRESS_MS    = 5000;
 const unsigned long FACTORY_RESET_MS = 10000;
 const unsigned long AP_TEARDOWN_MS   = 30000;   // apaga el AP 30 s tras conectar MQTT
@@ -504,6 +504,9 @@ void onMqttMessage(char* topic, byte* payload, unsigned int len) {
   } else if (command == "IDENTIFY") {
     // parpadeo para ubicar el equipo físicamente
     for (int i = 0; i < 6; i++) { digitalWrite(LED_PIN, i % 2 == 0); delay(120); }
+  } else if (command == "FACTORY_RESET") {
+    Serial.println("[cmd] FACTORY_RESET -> borrando config y reiniciando");
+    factoryReset();   // limpia NVS (WiFi/MQTT) y reinicia -> vuelve a modo vinculación
   } else {
     Serial.printf("[cmd] no soportado: %s\n", command.c_str());
   }
