@@ -42,6 +42,7 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
+#include <HTTPClient.h>   // announce de capacidades (POST al bridge)
 #include "esp_netif.h"   // DNS por DHCP en el SoftAP (esp_netif_dhcps_option, etc.)
 
 // ============== HARDWARE ==============
@@ -50,6 +51,10 @@ const int  BUTTON_PIN  = 0;
 const char* AP_SSID    = "ESP32-Setup";
 const char* FW_VERSION = "poc-3";
 const char* MODEL      = "AWARETRACK-001";
+// Bridge HTTP (para el announce de capacidades). Ajustar si cambia el backend.
+const char* BRIDGE_BASE = "https://iot-backend-n77w.onrender.com/api";
+// Comandos que ESTE firmware soporta (REBOOT siempre). Debe coincidir con el handler real.
+const char* SUPPORTED_COMMANDS[] = { "REBOOT", "IDENTIFY" };
 const unsigned long LONG_PRESS_MS    = 5000;
 const unsigned long FACTORY_RESET_MS = 10000;
 const unsigned long AP_TEARDOWN_MS   = 30000;   // apaga el AP 30 s tras conectar MQTT
@@ -79,6 +84,7 @@ bool apMode = false;
 bool natEnabled = false;          // NAPT activo (AP enruta a internet vía STA)
 unsigned long mqttUpAt = 0;       // millis del instante en que MQTT conectó (para teardown AP)
 bool apTorndown = false;          // el AP ya se apagó tras conectar MQTT
+bool announced = false;           // ya se anunciaron las capacidades (comandos) al bridge
 
 // botón
 unsigned long btnDownAt = 0;
@@ -113,6 +119,8 @@ void handleStatus();
 void maybeConnect();
 void mqttLoop();
 bool mqttConnect();
+void announceCommands();
+void onMqttMessage(char* topic, byte* payload, unsigned int len);
 void publishTelemetry();
 void handleButton();
 void factoryReset();
@@ -453,6 +461,7 @@ void mqttLoop() {
 bool mqttConnect() {
   if (cfgTlsInsecure) tlsClient.setInsecure();   // cert autofirmado (piloto)
   mqtt.setServer(cfgHost.c_str(), cfgPort);
+  mqtt.setCallback(onMqttMessage);   // ejecuta comandos recibidos (REBOOT, IDENTIFY...)
 
   String statusTopic = cfgPrefix + "/" + cfgSerial + "/status";
   Serial.printf("[mqtt] conectando a %s:%d como %s ...\n", cfgHost.c_str(), cfgPort, cfgSerial.c_str());
@@ -467,10 +476,60 @@ bool mqttConnect() {
     mqtt.subscribe(cmdTopic.c_str());
     if (mqttUpAt == 0) mqttUpAt = millis();   // arranca el cronómetro de teardown del AP
     publishTelemetry();   // primer dato inmediato
+    if (!announced) { announceCommands(); announced = true; }  // capacidades al bridge (1 vez)
   } else {
     Serial.printf("[mqtt] fallo rc=%d (revisa token/host)\n", mqtt.state());
   }
   return ok;
+}
+
+// Handler de comandos entrantes. El bridge publica {command, payload, logId} en
+// <prefix>/<serial>/commands. El firmware DEBE tener el código de cada comando que
+// declara soportar (SUPPORTED_COMMANDS). REBOOT y IDENTIFY van implementados aquí.
+void onMqttMessage(char* topic, byte* payload, unsigned int len) {
+  (void) topic;
+  JsonDocument d;
+  if (deserializeJson(d, payload, len)) {
+    Serial.println("[cmd] JSON inválido");
+    return;
+  }
+  String command = d["command"].is<const char*>() ? (const char*) d["command"] : "";
+  command.toUpperCase();
+  Serial.printf("[cmd] recibido: %s\n", command.c_str());
+
+  if (command == "REBOOT") {
+    Serial.println("[cmd] REBOOT -> reiniciando en 1s");
+    delay(1000);
+    ESP.restart();
+  } else if (command == "IDENTIFY") {
+    // parpadeo para ubicar el equipo físicamente
+    for (int i = 0; i < 6; i++) { digitalWrite(LED_PIN, i % 2 == 0); delay(120); }
+  } else {
+    Serial.printf("[cmd] no soportado: %s\n", command.c_str());
+  }
+}
+
+// El firmware DECLARA qué comandos soporta (HTTP POST al bridge). Auth por token.
+// La app lo lee en "Acciones" para mostrar solo comandos reales. REBOOT siempre va.
+void announceCommands() {
+  if (cfgSerial.isEmpty() || cfgToken.isEmpty()) return;
+  WiFiClientSecure client;
+  client.setInsecure();   // piloto (sin validar cert)
+  HTTPClient http;
+  String url = String(BRIDGE_BASE) + "/devices/" + cfgSerial + "/announce";
+  if (!http.begin(client, url)) { Serial.println("[announce] begin fallo"); return; }
+  http.addHeader("Content-Type", "application/json");
+
+  JsonDocument d;
+  d["token"] = cfgToken;
+  d["fw"] = FW_VERSION;
+  JsonArray arr = d["commands"].to<JsonArray>();
+  for (auto c : SUPPORTED_COMMANDS) arr.add(c);
+  String body; serializeJson(d, body);
+
+  int code = http.POST(body);
+  Serial.printf("[announce] POST %s -> %d\n", url.c_str(), code);
+  http.end();
 }
 
 void publishTelemetry() {
